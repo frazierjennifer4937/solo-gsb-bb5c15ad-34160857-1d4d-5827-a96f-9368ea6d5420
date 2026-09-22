@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>活动席位编排</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🪑 活动席位编排</div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="participants">参与者</button>
+      <button class="tab" data-tab="layout">分区与桌位</button>
+      <button class="tab" data-tab="rules">规则</button>
+      <button class="tab" data-tab="seating">编排结果</button>
+    </nav>
+  </header>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <main class="container">
+
+    <!-- ================= 参与者 ================= -->
+    <section id="tab-participants" class="tab-panel active">
+      <div class="panel-head">
+        <h2>参与者 <span id="p-count" class="badge">0</span></h2>
+        <div class="actions">
+          <label class="btn secondary">
+            导入 CSV
+            <input type="file" id="csv-file" accept=".csv,text/csv" hidden />
+          </label>
+          <button class="btn primary" id="btn-add-participant">+ 新增参与者</button>
+        </div>
+      </div>
+      <p class="hint">CSV 列：<code>name, group, note</code>（也支持中文表头「姓名,分组,备注」，无表头时按此顺序解析）。</p>
+
+      <div id="participant-form" class="card form-grid hidden">
+        <input type="hidden" id="p-id" />
+        <label>姓名 <input type="text" id="p-name" maxlength="100" placeholder="必填" /></label>
+        <label>分组 <input type="text" id="p-group" maxlength="100" placeholder="可选，如：技术部" /></label>
+        <label>备注 <input type="text" id="p-note" maxlength="255" placeholder="可选" /></label>
+        <div class="form-actions">
+          <button class="btn primary" id="p-save">保存</button>
+          <button class="btn ghost" id="p-cancel">取消</button>
+        </div>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>#</th><th>姓名</th><th>分组</th><th>备注</th><th class="col-actions">操作</th></tr>
+        </thead>
+        <tbody id="p-tbody"></tbody>
+      </table>
+    </section>
+
+    <!-- ================= 分区与桌位 ================= -->
+    <section id="tab-layout" class="tab-panel">
+      <div class="two-col">
+        <div>
+          <div class="panel-head">
+            <h3>分区 <span id="s-count" class="badge">0</span></h3>
+            <button class="btn primary small" id="btn-add-section">+ 新增分区</button>
+          </div>
+          <div id="section-form" class="card form-grid hidden">
+            <input type="hidden" id="s-id" />
+            <label>分区名称 <input type="text" id="s-name" maxlength="100" /></label>
+            <label>容量上限 <input type="number" id="s-capacity" min="1" placeholder="留空 = 不限" /></label>
+            <div class="form-actions">
+              <button class="btn primary" id="s-save">保存</button>
+              <button class="btn ghost" id="s-cancel">取消</button>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>名称</th><th>容量上限</th><th class="col-actions">操作</th></tr></thead>
+            <tbody id="s-tbody"></tbody>
+          </table>
+        </div>
+
+        <div>
+          <div class="panel-head">
+            <h3>桌位 <span id="t-count" class="badge">0</span></h3>
+            <button class="btn primary small" id="btn-add-table">+ 新增桌位</button>
+          </div>
+          <div id="table-form" class="card form-grid hidden">
+            <input type="hidden" id="t-id" />
+            <label>桌位名称 <input type="text" id="t-name" maxlength="100" placeholder="如：1 号桌" /></label>
+            <label>座位数 <input type="number" id="t-capacity" min="1" max="1000" value="8" /></label>
+            <label>所属分区
+              <select id="t-section"><option value="">（不分区）</option></select>
+            </label>
+            <div class="form-actions">
+              <button class="btn primary" id="t-save">保存</button>
+              <button class="btn ghost" id="t-cancel">取消</button>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>名称</th><th>座位数</th><th>分区</th><th class="col-actions">操作</th></tr></thead>
+            <tbody id="t-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 规则 ================= -->
+    <section id="tab-rules" class="tab-panel">
+      <div class="panel-head">
+        <h2>编排规则 <span id="r-count" class="badge">0</span></h2>
+        <button class="btn primary" id="btn-add-rule">+ 新增规则</button>
+      </div>
+
+      <div id="rule-form" class="card hidden">
+        <input type="hidden" id="r-id" />
+        <div class="rule-type-row">
+          <label><input type="radio" name="r-type" value="together" checked /> 必须同桌</label>
+          <label><input type="radio" name="r-type" value="separate" /> 禁止同桌</label>
+          <label><input type="radio" name="r-type" value="fixed" /> 固定席位</label>
+        </div>
+        <div class="rule-body">
+          <div class="rule-people">
+            <h4>选择参与者（至少 2 人；固定席位可选多人同桌）</h4>
+            <input type="text" id="r-filter" placeholder="搜索姓名 / 分组…" />
+            <div id="r-people" class="people-picker"></div>
+            <div class="hint">已选 <b id="r-selected-count">0</b> 人：<span id="r-selected-names"></span></div>
+          </div>
+          <div class="rule-target" id="r-target-box">
+            <h4>固定到</h4>
+            <label>桌位 <select id="r-table"></select></label>
+            <label>席位号 <input type="number" id="r-seat" min="1" placeholder="留空 = 只固定桌位" /></label>
+          </div>
+        </div>
+        <label class="full-line">备注 <input type="text" id="r-note" maxlength="255" /></label>
+        <label class="inline-check"><input type="checkbox" id="r-enabled" checked /> 启用此规则</label>
+        <div class="form-actions">
+          <button class="btn primary" id="r-save">保存</button>
+          <button class="btn ghost" id="r-cancel">取消</button>
+        </div>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>类型</th><th>参与者</th><th>目标</th><th>状态</th><th>备注</th><th class="col-actions">操作</th></tr>
+        </thead>
+        <tbody id="r-tbody"></tbody>
+      </table>
+    </section>
+
+    <!-- ================= 编排结果 ================= -->
+    <section id="tab-seating" class="tab-panel">
+      <div class="panel-head">
+        <h2>编排结果</h2>
+        <div class="actions">
+          <label class="inline-small">种子
+            <input type="number" id="seed" value="0" style="width:90px" />
+          </label>
+          <button class="btn primary" id="btn-solve">🔄 求解 / 重新求解</button>
+          <button class="btn secondary" id="btn-clear-locks">解除全部锁定</button>
+          <button class="btn danger ghost" id="btn-reset">清空安排</button>
+          <a class="btn secondary" href="/api/export" download="seating.csv">⬇ 导出 CSV</a>
+        </div>
+      </div>
+      <p class="hint">
+        在席位上点击可选择一位「未安排/其他桌」的参与者手动入座（自动锁定）；
+        🔒 为锁定席位，重新求解时保持不变。相同输入与相同<b>种子</b>下结果完全一致。
+      </p>
+
+      <div id="solve-summary" class="card hidden"></div>
+      <div id="conflict-box" class="conflict hidden">
+        <h4>⚠️ 无解 —— 以下规则相互冲突（或与锁定席位/容量冲突）：</h4>
+        <ul id="conflict-list"></ul>
+      </div>
+
+      <h3>席位图</h3>
+      <div id="seat-map"></div>
+
+      <h3>未安排参与者 <span id="unassigned-count" class="badge">0</span></h3>
+      <div id="unassigned-list" class="chip-box"></div>
+    </section>
+
+  </main>
+
+  <!-- 选座弹窗 -->
+  <div id="seat-modal" class="modal hidden">
+    <div class="modal-card">
+      <h4 id="modal-title">选择参与者</h4>
+      <input type="text" id="modal-filter" placeholder="搜索…" />
+      <div id="modal-people" class="people-picker tall"></div>
+      <div class="form-actions">
+        <button class="btn ghost" id="modal-cancel">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

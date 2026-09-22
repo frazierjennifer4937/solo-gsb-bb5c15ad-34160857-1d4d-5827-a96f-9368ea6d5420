@@ -1,0 +1,15 @@
+services:
+  seating:
+    build: .
+    container_name: seating-app
+    ports:
+      - "8000:8000"
+    volumes:
+      - seating-data:/app/data
+    environment:
+      # 也可改造成其他 SQLAlchemy 连接串（如 PostgreSQL）
+      DATABASE_URL: sqlite:////app/data/seating.db
+    restart: unless-stopped
+
+volumes:
+  seating-data:
