@@ -1,0 +1,15 @@
+services:
+  seatarrange:
+    build: .
+    image: seatarrange:latest
+    container_name: seatarrange
+    ports:
+      - "8000:8000"
+    volumes:
+      - seat-data:/data
+    environment:
+      SEAT_DB: /data/seatarrange.db
+    restart: unless-stopped
+
+volumes:
+  seat-data:

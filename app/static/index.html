@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>活动席位编排</title>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <h1>活动席位编排</h1>
+  <div class="solve-bar">
+    <label>随机种子
+      <input type="number" id="seed" value="42" style="width:90px">
+    </label>
+    <button id="btn-random-seed" class="btn-ghost" type="button">换一个</button>
+    <button id="btn-solve" class="btn-primary" type="button">生成 / 重新编排</button>
+    <button id="btn-unlock-all" class="btn-ghost" type="button">全部解锁</button>
+    <button id="btn-clear" class="btn-ghost danger" type="button">清空席位</button>
+  </div>
+</header>
+
+<div id="banner" class="banner hidden"></div>
+
+<nav class="tabs">
+  <button class="tab active" data-tab="arrange">席位编排</button>
+  <button class="tab" data-tab="participants">参与者</button>
+  <button class="tab" data-tab="venues">分区与桌位</button>
+  <button class="tab" data-tab="rules">规则</button>
+</nav>
+
+<main>
+  <!-- 席位编排 -->
+  <section id="tab-arrange" class="tabpanel active">
+    <div class="arrange-head">
+      <div id="arrange-summary" class="summary"></div>
+      <div>
+        <button id="btn-export" class="btn-secondary" type="button">导出结果 CSV</button>
+      </div>
+    </div>
+    <p class="hint">在每个席位卡上用下拉框调整桌位会自动<strong>锁定</strong>该席位；
+      勾选/取消勾选「锁定」可固定或放开。锁定的席位在重新编排时保持不变。</p>
+    <div id="conflict-panel" class="conflict-panel hidden"></div>
+    <div id="floor" class="floor"></div>
+    <div id="unseated" class="unseated hidden"></div>
+  </section>
+
+  <!-- 参与者 -->
+  <section id="tab-participants" class="tabpanel">
+    <div class="panel-row">
+      <form id="form-participant" class="inline-form">
+        <input name="name" placeholder="姓名" required maxlength="50">
+        <input name="note" placeholder="备注（可选）" maxlength="200">
+        <button class="btn-secondary" type="submit">添加参与者</button>
+      </form>
+      <div class="csv-tools">
+        <form id="form-csv">
+          <input type="file" id="csv-file" accept=".csv" hidden>
+          <button id="btn-import-csv" class="btn-secondary" type="button">导入 CSV</button>
+          <a href="/api/participants/template.csv"><button class="btn-ghost" type="button">下载模板</button></a>
+        </form>
+      </div>
+    </div>
+    <p class="hint">CSV 支持表头 <code>name,note</code>（或中文「姓名,备注」），UTF-8 / GBK 编码均可。</p>
+    <table class="grid">
+      <thead><tr><th>ID</th><th>姓名</th><th>备注</th><th></th></tr></thead>
+      <tbody id="participant-rows"></tbody>
+    </table>
+  </section>
+
+  <!-- 分区与桌位 -->
+  <section id="tab-venues" class="tabpanel">
+    <h3>分区</h3>
+    <form id="form-section" class="inline-form">
+      <input name="name" placeholder="分区名称" required maxlength="50">
+      <input name="capacity" type="number" min="0" value="0" style="width:110px"
+             title="0 表示不限容量">
+      <button class="btn-secondary" type="submit">添加分区</button>
+      <span class="hint">容量 0 = 不限</span>
+    </form>
+    <table class="grid">
+      <thead><tr><th>ID</th><th>分区</th><th>容量</th><th></th></tr></thead>
+      <tbody id="section-rows"></tbody>
+    </table>
+
+    <h3>桌位</h3>
+    <form id="form-table" class="inline-form">
+      <input name="name" placeholder="桌位名称" required maxlength="50">
+      <input name="capacity" type="number" min="1" value="6" style="width:100px">
+      <select name="section_id"><option value="">不属于分区</option></select>
+      <button class="btn-secondary" type="submit">添加桌位</button>
+    </form>
+    <table class="grid">
+      <thead><tr><th>ID</th><th>桌位</th><th>容量</th><th>分区</th><th></th></tr></thead>
+      <tbody id="table-rows"></tbody>
+    </table>
+  </section>
+
+  <!-- 规则 -->
+  <section id="tab-rules" class="tabpanel">
+    <div class="rule-builder">
+      <h3>新建规则</h3>
+      <form id="form-rule">
+        <div class="inline-form">
+          <select name="rule_type" id="rule-type">
+            <option value="must_together">必须同桌</option>
+            <option value="must_not">禁止同桌</option>
+            <option value="fixed">固定席位</option>
+          </select>
+          <select name="tid" id="rule-tid" class="hidden"></select>
+          <input name="note" placeholder="备注（可选）" maxlength="200">
+          <button class="btn-secondary" type="submit">添加规则</button>
+        </div>
+        <div id="rule-pids" class="picker"></div>
+        <div id="rule-pid" class="picker hidden"></div>
+        <p class="hint" id="rule-help">选择 2 名或更多参与者，求解时他们会被安排在同一桌。</p>
+      </form>
+    </div>
+
+    <h3>已设置的规则</h3>
+    <ul id="rule-list" class="rule-list"></ul>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
